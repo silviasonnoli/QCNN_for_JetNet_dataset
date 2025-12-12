@@ -1,1 +1,1 @@
-# Quantum-machine-learning
+# QCNN for JetNet Dataset
