@@ -1,0 +1,10 @@
+matplotlib
+scikit-learn
+torch
+qiskit==1.1.1
+qiskit_machine_learning==0.8.4
+jetnet
+pylatexenc
+numba==0.60.0
+hdf5plugin~=2.0
+numpy==1.26.4

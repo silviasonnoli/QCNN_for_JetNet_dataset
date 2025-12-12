@@ -1,0 +1,13 @@
+{
+"batch_size" : 16,
+"num_epochs" : 10,
+"init_weights_stdev" : 0.01,
+"learning_rate" : 0.01,
+"decay_rate" : 1,
+"beta1" : 0.9,
+"beta2" : 0.999,
+"epsilon" : 1e-8,
+"L1_lambda" : 0,
+"L2_lambda" : 0
+}
+
