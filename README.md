@@ -25,3 +25,5 @@ A QCNN implementation to be tested on the Top Quark Tagging dataset.
     `--pretrained_weights_file [pretrained_weights_file] \`
     `--save_weights [save_weights]`
     for more info on the execution flags, run `python3 main.py -h`.
+    
+    Training history plots and saved trained weights are generated in the `./.plots/` and `./.pretrained/` folders.
