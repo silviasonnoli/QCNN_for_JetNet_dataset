@@ -170,21 +170,18 @@ def pool_layer(sources, sinks, params):
 
 def create_2by2_qcnn_circuit_factory(encoding_type, conv_type):
     """
-    Crea la funzione fabbrica per l'intero circuito QCNN.
-    Questa funzione wrapper è necessaria per "catturare" conv_type
-    e n_qubits_total prima che la funzione finale venga creata.
+    Wrapper function to build the 4-qubit qcnn circuit.
 
-    Args:
-        encoding_type: (str): Tipo di encoding ("TPE", "HEE", "HEE2", "CHE").
-        conv_type (str): Tipo di filtro convoluzionale ("SO4", "SU4").
+    args:
+     - encoding_type: (str): encoding type ("TPE", "HEE", "HEE2", "CHE");
+     - conv_type (str): convolutional filter ("SO4", "SU4").
 
-    Returns:
-        tuple: (qnn_circuit_function, num_input_features, num_weight_params, input_params_vector, weight_params_vector)
-               where qnn_circuit_function is the function for EstimatorQNN,
-               num_input_features is the number of input features,
-               num_weight_params is the total number of optimizable parameters,
-               input_params_vector is the ParameterVector for the inputs,
-               weight_params_vector is the ParameterVector for the weights.
+    returns:
+     - qnn_circuit_function: function to be fed into EstimatorQNN;
+     - num_input_features: #input features for EstimatorQNN;
+     - num_weight_params: total number of weights;
+     - input_params_vector: dummy ParameterVector for inputs;
+     - weight_params_vector: dummy ParameterVector for weights.
     """
     n_qubits_total = 4
     if encoding_type not in ["TPE", "HEE", "HEE2", "CHE"]:
@@ -261,30 +258,27 @@ def create_2by2_qcnn_circuit_factory(encoding_type, conv_type):
 
         return qcnn_circuit
 
-    # Build an example circuit instance using the ParameterVectors
-    example_circuit_instance = qnn_circuit_builder_func(input_params_vector, weight_params_vector)
+    circuit_instance = qnn_circuit_builder_func(input_params_vector, weight_params_vector)
 
-    return example_circuit_instance, num_input_features, total_num_weights, input_params_vector, weight_params_vector
+    return circuit_instance, num_input_features, total_num_weights, input_params_vector, weight_params_vector
 
 
 def create_n_qubit_qcnn_circuit_factory(n_qubits_total, encoding_type, conv_type):
     """
-    Crea la funzione fabbrica per l'intero circuito QCNN.
-    Questa funzione wrapper è necessaria per "catturare" conv_type
-    e n_qubits_total prima che la funzione finale venga creata.
+    Wrapper function to build the n-qubit qcnn circuit.
 
-    Args:
-        n_qubits_total (int): Numero totale di qubit utilizzati per l'input dati (escluso l'ancillary se presente).
-        encoding_type: (str): Tipo di encoding ("TPE", "HEE", "HEE2", "CHE").
-        conv_type (str): Tipo di filtro convoluzionale ("SO4", "SU4").
+    args:
+     - n_qubits_total: number of qubits corresponding to the input features
+       (ancillary qubit is excluded);
+     - encoding_type: (str): encoding type ("TPE", "HEE", "HEE2", "CHE");
+     - conv_type (str): convolutional filter ("SO4", "SU4").
 
-    Returns:
-        tuple: (qnn_circuit_function, num_input_features, num_weight_params, input_params_vector, weight_params_vector)
-               where qnn_circuit_function is the function for EstimatorQNN,
-               num_input_features is the number of input features,
-               num_weight_params is the total number of optimizable parameters,
-               input_params_vector is the ParameterVector for the inputs,
-               weight_params_vector is the ParameterVector for the weights.
+    returns:
+     - qnn_circuit_function: function to be fed into EstimatorQNN;
+     - num_input_features: #input features for EstimatorQNN;
+     - num_weight_params: total number of weights;
+     - input_params_vector: dummy ParameterVector for inputs;
+     - weight_params_vector: dummy ParameterVector for weights.
     """
     if encoding_type not in ["TPE", "HEE", "HEE2", "CHE"]:
         raise NotImplementedError("NotImplementedError: invalid encoding type.\n")
@@ -366,8 +360,7 @@ def create_n_qubit_qcnn_circuit_factory(n_qubits_total, encoding_type, conv_type
 
         return qcnn_circuit
 
-    # Build an example circuit instance using the ParameterVectors
-    example_circuit_instance = qnn_circuit_builder_func(input_params_vector, weight_params_vector)
+    circuit_instance = qnn_circuit_builder_func(input_params_vector, weight_params_vector)
 
-    return example_circuit_instance, num_input_features, total_num_weights, input_params_vector, weight_params_vector
+    return circuit_instance, num_input_features, total_num_weights, input_params_vector, weight_params_vector
 

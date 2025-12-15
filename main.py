@@ -92,7 +92,12 @@ def main():
         if save_weights:
             QCNN_train.save_weights()
     elif model_type == "cnn":
-        out_channels = 10 if conv_type=="SO4" else 17
+        if N_components == 4:
+            out_channels = 10 if conv_type=="SO4" else 17
+        elif N_components == 6:
+            out_channels = 14 if conv_type=="SO4" else 26
+        elif N_components == 9:
+            out_channels = 26 if conv_type=="SO4" else 48
         kernel_size = 2
         CNN_train = CNN_training(N_components, out_channels, kernel_size, 'cpu', pretrained_weights, **hyp_config)
         cnn_history = CNN_train.train(jet_train_pca, jet_y_train, jet_test_pca, jet_y_test, verbose=False)

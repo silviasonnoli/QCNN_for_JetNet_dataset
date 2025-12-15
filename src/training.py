@@ -20,17 +20,12 @@ def cross_entropy_loss(predictions, true_labels):
 
 def cross_entropy_grad(predictions, true_labels):
     predictions = predictions.reshape(-1)
-    # La true_labels è già mappata a [-1, 1]
-    # Converti le etichette per la loss: [-1, 1] -> [0, 1]
+    # map true_labels and predictions to [0, 1]
     true_labels_01 = (true_labels + 1) / 2
-    # Converti le previsioni per la loss: [-1, 1] -> [0, 1]
     probs = (predictions + 1) / 2
 
-    # Derivata della Binary Cross-Entropy rispetto all'input (probs)
     d_loss_d_probs = - (true_labels_01 / (probs + 1e-10) - (1 - true_labels_01) / (1 - probs + 1e-10))
 
-    # Ora usa la regola della catena: d(loss)/d(output) = d(loss)/d(probs) * d(probs)/d(output)
-    # dove d(probs)/d(output) = d/d(output) * ((output + 1)/2) = 1/2
     d_loss_d_output = d_loss_d_probs / 2
     return d_loss_d_output
 
@@ -43,9 +38,14 @@ def mse_grad(predictions, true_labels):
 class QCNN_training():
     def __init__(self, N_components, encoding_type, conv_type, loss="bce", pretrained_weights=None):
         """
+        Container function for QCNN training. Sets up environment for
+        training and initialises EstimatorQNN.
         args:
-         - num_weight_params: #parameters of the qcnn;
-         - loss: choose between "bce" (default) and "mse".
+         - N_components: number of qubits relative to the data dimensions (excluding ancilla);
+         - encoding_type: type of encoding circuit;
+         - conv_type: typer of convolutional circuit;
+         - loss: loss to use (choose between "bce" and "mse";
+         - pretrained_weights: if present, initialises weights with provided pretrained ones.
         """
         if loss=="bce":
             self.calculate_loss = cross_entropy_loss
@@ -76,7 +76,6 @@ class QCNN_training():
                 raise ValueError(f"ValueError: pretrained weights size ({len(self.current_weights)}) "
                                  f"incompatible with number of parameters ({self.num_weight_params}).")
 
-        # Pass the circuit instance and the ParameterVectors to EstimatorQNN
         self.qnn = EstimatorQNN(
             circuit=circuit,
             input_params=input_params_vector,
@@ -85,27 +84,22 @@ class QCNN_training():
             estimator=estimator
         )
 
-        # Esempio di inferenza
-        x_data = np.random.rand(num_input_features) # Dati di input
-        initial_weights = np.random.normal(0, 0.01, self.num_weight_params) # Pesi iniziali del modello
+        # Dummy circuit
+        x_data = np.random.rand(num_input_features)
+        initial_weights = np.random.normal(0, 0.01, self.num_weight_params)
 
         output = self.qnn.forward(input_data=x_data, weights=initial_weights)
-        print(f"Output della QCNN: {output}")
+        print(f"QCNN utput: {output}")
 
-        # Per la retropropagazione
         gradients = self.qnn.backward(input_data=x_data, weights=initial_weights)
-        print(f"Gradienti della QCNN: {gradients}")
+        print(f"QCNN gradients: {gradients}")
 
-        # Esempio: Visualizza il circuito (for a given set of parameters)
-        # You can call the function directly to visualize an instance of the circuit
         test_input_data = np.random.rand(num_input_features)
         test_weights = np.random.rand(self.num_weight_params)
-        # Create a circuit instance for drawing
         drawing_circuit = circuit.assign_parameters({**dict(zip(input_params_vector, test_input_data)),
                                                 **dict(zip(weight_params_vector, test_weights))})
 
-        print("\nEsempio di circuito QCNN generato:")
-        #print(drawing_circuit.draw(output='text', idle_wires=False))
+        print("\nExample of QCNN circuit:")
         circuit.draw("mpl", style="clifford")
 
     def Adam(self, X_train_full, y_train_full, X_test_full, y_test_full, save_weights=False, **kwargs):
@@ -117,6 +111,7 @@ class QCNN_training():
          - y_train_full: full swept of the training y-s;
          - X_test_full: full swept of the test x-s;
          - y_test_full: full swept of the test y-s;
+         - save_weights: flag to save weights to file;
          - **kwargs: must contain the training hyperparameters from the config file.
 
         returns:
@@ -128,22 +123,22 @@ class QCNN_training():
             "loss_tr" : [],
             "loss_ts" : []
           }
-        # Converti etichette a [-1, 1] se la tua funzione di loss/output lo richiede (comune per QML)
+        # map labels to [-1, 1]
         y_train_full_mapped = 2 * y_train_full - 1
         y_test_full_mapped = 2 * y_test_full - 1
 
         num_samples_total = len(X_train_full)
 
-        # Inizializzazione di Adam
-        m = np.zeros(self.num_weight_params) # Media mobile dei gradienti (primo momento)
-        v = np.zeros(self.num_weight_params) # Media mobile dei gradienti al quadrato (secondo momento)
-        t = 0 # Contatore delle iterazioni
+        # Adam inizialisation
+        m = np.zeros(self.num_weight_params)
+        v = np.zeros(self.num_weight_params)
+        t = 0
 
-        # Inizializza i pesi del modello (se non presenti pesi preallenati)
+        # If no pretrained weights are provided, initialise model weights
         if self.current_weights is None:
             self.current_weights = np.random.normal(0, kwargs["init_weights_stdev"], self.num_weight_params)
 
-        print(f"Inizio training con Adam e mini-batching (batch_size={kwargs["batch_size"]})")
+        print(f"Launching training with Adam and mini-batching (batch_size={kwargs['batch_size']})")
 
         for epoch in range(kwargs["num_epochs"]):
             # Mescola i dati
@@ -160,47 +155,37 @@ class QCNN_training():
 
                 t += 1
 
-                # 1. Calcola il forward pass del modello
                 current_predictions = self.qnn.forward(input_data=X_batch, weights=self.current_weights)
 
-                # 2. Calcola i gradienti dell'output del circuito (valore di aspettazione) rispetto ai pesi
                 grad_output_vs_weights = self.qnn.backward(input_data=X_batch, weights=self.current_weights)[1]
 
-                # 3. Calcola i gradienti della loss rispetto all'output del circuito
                 grad_loss_vs_output = self.grad_loss(current_predictions, y_batch)
                 grad_output_vs_weights = grad_output_vs_weights.squeeze()
 
-                # 4. Applica la regola della catena per calcolare i gradienti finali
                 final_gradients = grad_loss_vs_output.reshape(-1, 1) * grad_output_vs_weights
 
-                # 5. Prendi la media dei gradienti del batch
                 avg_gradients = np.mean(final_gradients, axis=0)
 
-                # Regolarizzazione L1
+                # L1 Regularisation
                 L1_grad = kwargs["L1_lambda"] * np.sign(self.current_weights)
 
-                # Regolarizzazione L2
+                # L1 Regularisation
                 L2_grad = 2 * kwargs["L2_lambda"] * self.current_weights
 
-                # 6. Aggiornamento Adam
                 m = kwargs["beta1"] * m + (1 - kwargs["beta1"]) * avg_gradients
                 v = kwargs["beta2"] * v + (1 - kwargs["beta2"]) * (avg_gradients ** 2)
                 m_hat = m / (1 - kwargs["beta1"]**t)
                 v_hat = v / (1 - kwargs["beta2"]**t)
-                # print(learning_rate * m_hat / (np.sqrt(v_hat) + epsilon))
                 self.current_weights -= kwargs["learning_rate"] * (kwargs["decay_rate"] ** epoch) * \
                                    m_hat / (np.sqrt(v_hat) + kwargs["epsilon"]) + L1_grad + L2_grad
-                # print(self.current_weights)
 
 
-                # Calcola la loss per il mini-batch corrente per il monitoraggio
                 current_batch_predictions = self.qnn.forward(input_data=X_batch, weights=self.current_weights)
                 current_batch_loss = self.calculate_loss(current_batch_predictions, y_batch)
 
                 epoch_loss_total += current_batch_loss
                 num_batches += 1
 
-            # avg_epoch_loss = epoch_loss_total / num_batches
             y_predictions_tr = self.qnn.forward(input_data=X_train_full, weights=self.current_weights)
             avg_epoch_loss = self.calculate_loss(y_predictions_tr, y_train_full)
             y_predictions_tr = (y_predictions_tr > 0).astype(int).reshape(-1)
@@ -210,8 +195,8 @@ class QCNN_training():
             test_predictions = (test_predictions > 0).astype(int).reshape(-1)
             accuracy_ts = np.mean(test_predictions == y_test_full) * 100
             print(f"Epoca {epoch+1}/{kwargs['num_epochs']}")
-            print(f"Train: Loss Media: {avg_epoch_loss:.4f}, accuracy: {accuracy_tr:.2f}")
-            print(f"Test:  Loss Media: {test_loss:.4f}, accuracy: {accuracy_ts:.2f}")
+            print(f"Train: average loss: {avg_epoch_loss:.4f}, accuracy: {accuracy_tr:.2f}")
+            print(f"Test:  average loss: {test_loss:.4f}, accuracy: {accuracy_ts:.2f}")
             history["accuracy_tr"].append(accuracy_tr)
             history["accuracy_ts"].append(accuracy_ts)
             history["loss_tr"].append(avg_epoch_loss)
@@ -219,6 +204,16 @@ class QCNN_training():
         return history
 
     def average_performance(self, X_train_full, y_train_full, X_test_full, y_test_full, n_trials=50):
+        """
+        Evaluates model average performance on a number of trials.
+
+        args:
+         - X_train_full: full swept of the training x-s;
+         - y_train_full: full swept of the training y-s;
+         - X_test_full: full swept of the test x-s;
+         - y_test_full: full swept of the test y-s;
+         - n_trials: number of evaluations to perform.
+        """
         y_train_full_mapped = 2 * y_train_full - 1
         y_test_full_mapped = 2 * y_test_full - 1
 
@@ -251,10 +246,10 @@ class QCNN_training():
         std_loss_test = np.std(test_loss)
         std_accuracy_test = np.std(test_accuracy)
 
-        print(f"Loss media sul set di train: {avg_loss_train:.4f} +- {std_loss_train:.4f}")
-        print(f"Accuratezza media sul set di train: {avg_accuracy_train*100:.2f} +- {std_accuracy_train*100:.2f} %")
-        print(f"\nLoss media sul set di test: {avg_loss_test:.4f} +- {std_loss_test:.4f}")
-        print(f"Accuratezza media sul set di test: {avg_accuracy_test*100:.2f} +- {std_accuracy_test*100:.2f} %")
+        print(f"Average loss on training set: {avg_loss_train:.4f} +- {std_loss_train:.4f}")
+        print(f"Average accuracy on training set: {avg_accuracy_train*100:.2f} +- {std_accuracy_train*100:.2f} %")
+        print(f"\nAverage loss on test set: {avg_loss_test:.4f} +- {std_loss_test:.4f}")
+        print(f"Average accuracy on test set: {avg_accuracy_test*100:.2f} +- {std_accuracy_test*100:.2f} %")
 
     def save_weights(self):
         weights_dir = ".pretrained"

@@ -54,6 +54,16 @@ def invariant_mass(p):
     return mp
 
 def Lorentz_boost(p, P):
+    """
+    Lorentz boost along P's spatial momentum and such that P's boosted energy is E0.
+
+    args:
+     - p: 4-momentum to transform;
+     - P: 4-momentum along which the boost is performed.
+
+    returns:
+     - Lorentz @ p: p transformed according to the Lorentz boost matrix.
+    """
     # p: 4-momentum to transform
     # P: 4-momentum along which the boost is performed
     gamma = (P[0]*E0 - np.sqrt(E0**2 - m0**2)*np.sqrt(P[1]**2 + P[2]**2 + P[3]**2))/m0**2
@@ -71,10 +81,17 @@ def Lorentz_boost(p, P):
     return Lorentz @ p
 
 def Gram_Schmidt_basis(p1, p2, p3):
-    # Takes 3 biggest 4-momenta by spatial momentum
-    # and constructs Gram Schmidt basis
+    """
+    Builds a Gram-Schmidt basis from p1, p2, p3.
+
+    args:
+     - p1, p2, p3: 3 biggest 4-momenta by spatial momentum to build the base from.
+
+    returns:
+     - e1, e2, e3: final Gram-Schmidt basis.
+    """
     Pj = p1 + p2 + p3
-    # Use only spatial components for dot products in Gram-Schmidt
+
     e1 = Pj[1:]/np.linalg.norm(Pj[1:])
     e2 = (p1[1:] - np.dot(p1[1:], e1) * e1)/ \
           np.linalg.norm(p1[1:] - np.dot(p1[1:], e1) * e1)
@@ -82,7 +99,19 @@ def Gram_Schmidt_basis(p1, p2, p3):
           np.linalg.norm(p2[1:] - np.dot(p2[1:], e1) * e1 - np.dot(p2[1:], e2) * e2)
     return e1, e2, e3
 
-def jet_images(P_jet, P_components):
+def jet_images(P_components):
+    """
+    Builds the jet histogram images by binning according to the projection
+    on the Gram-Schmidt base vectors.
+
+    args:
+     - P_components: individual components of the boost. The first 3 are taken to build
+       the Gram-Schmidt basis.
+
+    returns:
+     - energy_histogram: a 28x28 histogram of the spatial distribution of the boost energy
+       partitioned among the components.
+    """
     _, e2, e3 = Gram_Schmidt_basis(P_components[0], P_components[1], P_components[2])
     image_coordinates = lambda x : np.array([np.dot(x[1:]/np.linalg.norm(x[1:]), e2), np.dot(x[1:]/np.linalg.norm(x[1:]), e3)]) \
                                    if np.linalg.norm(x[1:]) > eps else \
@@ -101,6 +130,25 @@ def jet_images(P_jet, P_components):
 ### -- PREPROCESSING -- ###
 
 def preprocessing(particle_train, particle_test, jet_train, jet_test, N_components):
+    """
+    Preprocessing pipeline. The following steps are performed:
+     - sets are shuffled;
+     - jets and components are rescaled so that the invariant mass for the jet is m0;
+     - Lorentz boost is applied to the components to put them in a frame where
+       spatial momentum orientation of the jet is the same, but total energy is E0;
+     - jet images are created by projecting onto the Gram-Schmidt basis;
+     - PCA is applied to reduce to N_components dimensions;
+     - principal components are rescaled in a range [0, pi/2].
+
+    args:
+     - particle_train, particle_test: training and test set for the jets' components;
+     - jet_train, jet_test: training and test set for the jets as a whole,
+     - N_components: final number of components resulting from PCA.
+
+    returns:
+     - jet_train_pca, jet_y_train, jet_test_pca, jet_y_test: training and test PCA images, with
+       respective labels.
+    """
     shuffled_idx_train = np.random.permutation(len(particle_train))
     shuffled_idx_test = np.random.permutation(len(particle_test))
 
@@ -156,20 +204,9 @@ def preprocessing(particle_train, particle_test, jet_train, jet_test, N_componen
     jet_test_images = np.zeros((len(particle_test), 28, 28))
 
     for i in range(len(particle_train)):
-        jet_train_images[i] = jet_images(jet_p_scaled_train[i], particle_boost_train[i])
+        jet_train_images[i] = jet_images(particle_boost_train[i])
     for i in range(len(particle_test)):
-        jet_test_images[i] = jet_images(jet_p_scaled_test[i], particle_boost_test[i])
-
-    #standardisation before PCA
-    # StdScale = StandardScaler(with_std=False)
-    # jet_train_images_reshape = jet_train_images.reshape(len(particle_train), -1)/jet_train_images.sum(axis=(1, 2))[:,np.newaxis]
-    # jet_test_images_standard = jet_test_images.reshape(len(particle_test), -1)/jet_test_images.sum(axis=(1, 2))[:,np.newaxis]
-    # jet_train_images_standard = StdScale.fit_transform(jet_train_images_reshape)
-    # jet_test_images_standard = StdScale.fit_transform(jet_test_images_standard)
-
-    # pca = PCA(n_components=N_components)
-    # jet_train_pca_unnorm = pca.fit_transform(jet_train_images_standard)
-    # jet_test_pca_unnorm = pca.fit_transform(jet_test_images_standard)
+        jet_test_images[i] = jet_images(particle_boost_test[i])
 
     pca = PCA(n_components=N_components)
     jet_train_pca_unnorm = pca.fit_transform(jet_train_images.reshape(len(particle_train), -1))

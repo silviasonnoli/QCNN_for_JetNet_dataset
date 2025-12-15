@@ -1,6 +1,6 @@
 {
-"batch_size": 16,
-"num_epochs" : 15,
+"batch_size": 8,
+"num_epochs" : 5,
 "init_weights_stdev" : 0.01,
 "learning_rate" : 0.01,
 "decay_rate" : 1,

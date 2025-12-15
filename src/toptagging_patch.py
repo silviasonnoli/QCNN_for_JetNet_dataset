@@ -19,6 +19,8 @@ class TopTaggingPatch:
     """
     PyTorch ``torch.unit.data.Dataset`` class for the Top Quark Tagging Reference dataset.
 
+    This is a patch for the TopTagging class of the jetnet library.
+
     If hdf5 files are not found in the ``data_dir`` directory then dataset will be downloaded
     from Zenodo (https://zenodo.org/record/2603256).
 
