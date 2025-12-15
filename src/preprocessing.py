@@ -64,8 +64,6 @@ def Lorentz_boost(p, P):
     returns:
      - Lorentz @ p: p transformed according to the Lorentz boost matrix.
     """
-    # p: 4-momentum to transform
-    # P: 4-momentum along which the boost is performed
     gamma = (P[0]*E0 - np.sqrt(E0**2 - m0**2)*np.sqrt(P[1]**2 + P[2]**2 + P[3]**2))/m0**2
     beta_mod = np.sqrt(1 - 1/gamma**2)
     if P[0] > E0:
